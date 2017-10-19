@@ -60,8 +60,21 @@ def expand_leaf(node, board, state):
     Returns:    The added child node.
 
     """
-    pass
+    """
+    available_actions = node.untried_actions
+    chosen_action = get_winning_action(available_actions)
 
+    if chosen_action != None:
+        losing_actions = get_losing_actions(available_actions)
+        try:
+            chosen_action = random.choice(list(set(available_actions) - set(losing_actions)))
+        except IndexError:
+            chosen_action = random.choice(losing_actions)
+    """
+
+    chosen_action = random.choice(node.untried_actions)
+
+    return MCTSNode(parent=node, parent_action=chosen_action, action_list=board.legal_actions(state))
 
 def rollout(board, state):
     """ Given the state of the game, the rollout plays out the remainder randomly.
