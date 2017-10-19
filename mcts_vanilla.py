@@ -6,7 +6,9 @@ from math import sqrt, log
 num_nodes = 1000
 explore_faction = 2.
 
-def traverse_nodes(node, state, identity):
+gboard = None
+
+def traverse_nodes(node, board, state, identity):
     """ Traverses the tree until the end criterion are met.
 
     Args:
@@ -17,11 +19,38 @@ def traverse_nodes(node, state, identity):
     Returns:        A node from which the next stage of the search can proceed.
 
     """
-    pass
-    # Hint: return leaf_node
+    current = node
+    current_state = state
+
+    finished = False
+
+    # Loop through nodes in tree
+    while not finished:
+        # If there are untried actions or the game has ended we need to quit the loop
+        if current.untried_actions != []:
+            finished = True
+        elif gboard.is_ended(current_state):
+            finished = True
+        else:
+            # Otherwise we descend through the tree
+            best_UCT = 0
+            best_child = None
+
+            children = current.child_nodes
+            for child in children:
+                wins = child.wins if board.current_player(current_state) == identity_of_bot else 1 - child.wins
+                child_UCT = wins / child.visits + explore_faction * sqrt(log(current.visits / child.visits))
+                if child_UCT > best_UCT:
+                    best_UCT = child_UCT
+                    best_child = child
+
+            current = best_child
+            current_state = board.next_state(current_state, best_child.parent_action)
+
+    return current
 
 
-def expand_leaf(node, state):
+def expand_leaf(node, board, state):
     """ Adds a new leaf to the tree by creating a new child node for the given node.
 
     Args:
@@ -32,10 +61,9 @@ def expand_leaf(node, state):
 
     """
     pass
-    # Hint: return new_node
 
 
-def rollout(state):
+def rollout(board, state):
     """ Given the state of the game, the rollout plays out the remainder randomly.
 
     Args:
