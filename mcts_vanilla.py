@@ -29,7 +29,7 @@ def traverse_nodes(node, board, state, identity):
         # If there are untried actions or the game has ended we need to quit the loop
         if current.untried_actions != []:
             finished = True
-        elif gboard.is_ended(current_state):
+        elif board.is_ended(current_state):
             finished = True
         else:
             # Otherwise we descend through the tree
@@ -37,8 +37,9 @@ def traverse_nodes(node, board, state, identity):
             best_child = None
 
             children = current.child_nodes
-            for child in children:
-                wins = child.wins if board.current_player(current_state) == identity_of_bot else 1 - child.wins
+            
+            for key, child in children.items():
+                wins = child.wins if board.current_player(current_state) == identity else 1 - child.wins
                 child_UCT = wins / child.visits + explore_faction * sqrt(log(current.visits / child.visits))
                 if child_UCT > best_UCT:
                     best_UCT = child_UCT
@@ -47,7 +48,7 @@ def traverse_nodes(node, board, state, identity):
             current = best_child
             current_state = board.next_state(current_state, best_child.parent_action)
 
-    return current
+    return current, current_state
 
 
 def expand_leaf(node, board, state):
@@ -72,9 +73,11 @@ def expand_leaf(node, board, state):
             chosen_action = random.choice(losing_actions)
     """
 
-    chosen_action = random.choice(node.untried_actions)
+    chosen_action = choice(node.untried_actions)
 
-    return MCTSNode(parent=node, parent_action=chosen_action, action_list=board.legal_actions(state))
+    node.untried_actions.remove(chosen_action)
+
+    return MCTSNode(parent=node, parent_action=chosen_action, action_list=board.legal_actions(board.next_state(state,chosen_action)))
 
 def rollout(board, state):
     """ Given the state of the game, the rollout plays out the remainder randomly.
@@ -82,9 +85,25 @@ def rollout(board, state):
     Args:
         state:  The state of the game.
 
-    """
-    pass
+    Returns:    True if player won, False otherwise
 
+    """
+    identity = 1 if board.current_player(state) == 2 else 2
+    current_state = state
+
+    # Play until end (win/lose)
+    while not board.is_ended(current_state):
+        move = choice(board.legal_actions(current_state))
+        current_state = board.next_state(current_state, move)
+
+    if identity != board.current_player(current_state):
+        # Won
+        won = True
+    else:
+        # Lost
+        won = False
+
+    return won
 
 def backpropagate(node, won):
     """ Navigates the tree from a leaf node to the root, updating the win and visit count of each node along the path.
@@ -94,7 +113,14 @@ def backpropagate(node, won):
         won:    An indicator of whether the bot won or lost the game.
 
     """
-    pass
+    temp = node
+    while True:
+        node.wins += 1 if won else 0
+        node.visits += 1
+        node = node.parent
+        
+        if node == None:
+            break
 
 
 def think(board, state):
@@ -118,7 +144,22 @@ def think(board, state):
         node = root_node
 
         # Do MCTS - This is all you!
+        leaf, new_state = traverse_nodes(node, board, sampled_game, identity_of_bot)
+        child = expand_leaf(leaf, board, new_state)
+        leaf.child_nodes[child.parent_action] = child
+        won = rollout(board, board.next_state(new_state, child.parent_action))
+        backpropagate(child, won)
 
-    # Return an action, typically the most frequently used action (from the root) or the action with the best
-    # estimated win rate.
-    return None
+    best_child = None
+    best_ratio = 0
+
+    print("N. first children: {}".format(len(root_node.child_nodes)))
+
+    for key, child in root_node.child_nodes.items():
+        ratio = child.wins/child.visits
+        print("- Child [{}] ratio: {}".format(child.parent_action, ratio))
+        if ratio >= best_ratio:
+            best_child = child
+            best_ratio = ratio
+
+    return best_child.parent_action

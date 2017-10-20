@@ -24,9 +24,10 @@ class MCTSNode:
         """
         This method provides a string representing the node. Any time str(node) is used, this method is called.
         """
-        return ' '.join(["[", str(self.parent_action),
-                         "Win rate:", "{0:.0f}%".format(100 * self.wins / self.visits),
-                         "Visits:", str(self.visits),  "]"])
+        # return ' '.join(["[", str(self.parent_action),
+                         # "Win rate:", "{0:.0f}%".format(100 * self.wins / self.visits),
+                         # "Visits:", str(self.visits),  "]"])
+        return "{}/{}".format(self.wins, self.visits)
 
     def tree_to_string(self, horizon=1, indent=0):
         """ This method returns a string of the tree down to a defined horizon. The string is recursively constructed.
