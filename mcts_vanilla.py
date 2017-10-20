@@ -30,15 +30,15 @@ def traverse_nodes(node, board, state, identity):
         if current.untried_actions != []:
             finished = True
         elif board.is_ended(current_state):
-            finished = True
+             finished = True
         else:
             # Otherwise we descend through the tree
             best_UCT = 0
             best_child = None
-
             children = current.child_nodes
-            
+            print("hey")
             for key, child in children.items():
+                print("hello")
                 wins = child.wins if board.current_player(current_state) == identity else 1 - child.wins
                 child_UCT = wins / child.visits + explore_faction * sqrt(log(current.visits / child.visits))
                 if child_UCT > best_UCT:
@@ -47,7 +47,7 @@ def traverse_nodes(node, board, state, identity):
 
             current = best_child
             current_state = board.next_state(current_state, best_child.parent_action)
-
+    #print(current)
     return current, current_state
 
 
@@ -145,10 +145,11 @@ def think(board, state):
 
         # Do MCTS - This is all you!
         leaf, new_state = traverse_nodes(node, board, sampled_game, identity_of_bot)
-        child = expand_leaf(leaf, board, new_state)
-        leaf.child_nodes[child.parent_action] = child
-        won = rollout(board, board.next_state(new_state, child.parent_action))
-        backpropagate(child, won)
+        if leaf.untried_actions != []:
+            child = expand_leaf(leaf, board, new_state)
+            leaf.child_nodes[child.parent_action] = child
+            won = rollout(board, board.next_state(new_state, child.parent_action))
+            backpropagate(child, won)
 
     best_child = None
     best_ratio = 0
@@ -161,5 +162,5 @@ def think(board, state):
         if ratio >= best_ratio:
             best_child = child
             best_ratio = ratio
-
+    print(board.points_values(new_state))
     return best_child.parent_action
