@@ -5,12 +5,21 @@ import mcts_vanilla
 import mcts_modified
 import random_bot
 import rollout_bot
+import experiment1.mcts_vanilla100
+import experiment1.mcts_vanilla200
+import experiment1.mcts_vanilla400
+import experiment1.mcts_vanilla500
+import experiment1.mcts_vanilla50
 
 players = dict(
     random_bot=random_bot.think,
     rollout_bot=rollout_bot.think,
     mcts_vanilla=mcts_vanilla.think,
-    mcts_modified=mcts_modified.think
+    mcts_vanilla100=mcts_vanilla100.think,
+    mcts_vanilla200=mcts_vanilla200.think,
+    mcts_vanilla400=mcts_vanilla400.think,
+    mcts_vanilla500=mcts_vanilla500.think,
+    mcts_modified50=mcts_modified50.think
 )
 
 board = p3_t3.Board()
