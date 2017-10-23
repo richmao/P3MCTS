@@ -6,8 +6,6 @@ from math import sqrt, log
 num_nodes = 1000
 explore_faction = 2.
 
-gboard = None
-
 def traverse_nodes(node, board, state, identity):
     """ Traverses the tree until the end criterion are met.
 
@@ -22,30 +20,32 @@ def traverse_nodes(node, board, state, identity):
     current = node
     current_state = state
 
-    finished = False
-
     # Loop through nodes in tree
-    while not finished:
-        # If there are untried actions or the game has ended we need to quit the loop
+    while not board.is_ended(current_state):
+        # If there are untried actions we quit the loop
         if current.untried_actions != []:
-            finished = True
-        elif board.is_ended(current_state):
-             finished = True
+            break
         else:
             # Otherwise we descend through the tree
+
             best_UCT = 0
-            best_child = None
-            children = current.child_nodes
+            best_children = []
 
-            for key, child in children.items():
-                ratio = child.wins / child.visits
-                child_UCT = (ratio if board.current_player(current_state) == identity else 1 - ratio) + explore_faction * sqrt(log(current.visits / child.visits))
-                if child_UCT > best_UCT:
+            for key, child in current.child_nodes.items():
+                exploit_term = child.wins / float(child.visits)
+                explore_term = explore_faction * sqrt(log(current.visits) / child.visits)
+
+                child_UCT = (exploit_term if board.current_player(current_state) == identity else (1 - exploit_term)) + explore_term
+
+                if child_UCT == best_UCT:
+                    best_children.append(child)
+                elif child_UCT > best_UCT:
+                    best_children = [child]
                     best_UCT = child_UCT
-                    best_child = child
 
-            current = best_child
-            current_state = board.next_state(current_state, best_child.parent_action)
+            current = choice(best_children)
+            current_state = board.next_state(current_state, current.parent_action)
+
     #print(current)
     return current, current_state
 
@@ -73,12 +73,15 @@ def expand_leaf(node, board, state):
     """
 
     chosen_action = choice(node.untried_actions)
+    child = MCTSNode(parent=node, parent_action=chosen_action, action_list=board.legal_actions(board.next_state(state,chosen_action)))
+
 
     node.untried_actions.remove(chosen_action)
+    node.child_nodes[chosen_action] = child
 
-    return MCTSNode(parent=node, parent_action=chosen_action, action_list=board.legal_actions(board.next_state(state,chosen_action)))
+    return child
 
-def rollout(board, state):
+def rollout(board, state, identity):
     """ Given the state of the game, the rollout plays out the remainder randomly.
 
     Args:
@@ -87,7 +90,6 @@ def rollout(board, state):
     Returns:    True if player won, False otherwise
 
     """
-    identity = 1 if board.current_player(state) == 2 else 2
     current_state = state
 
     # Play until end (win/lose)
@@ -95,14 +97,7 @@ def rollout(board, state):
         move = choice(board.legal_actions(current_state))
         current_state = board.next_state(current_state, move)
 
-    if identity != board.current_player(current_state):
-        # Won
-        won = True
-    else:
-        # Lost
-        won = False
-
-    return won
+    return True if board.points_values(current_state)[identity] == 1 else False
 
 def backpropagate(node, won):
     """ Navigates the tree from a leaf node to the root, updating the win and visit count of each node along the path.
@@ -144,23 +139,28 @@ def think(board, state):
 
         # Do MCTS - This is all you!
         leaf, new_state = traverse_nodes(node, board, sampled_game, identity_of_bot)
-        if leaf.untried_actions != []:
+        if not board.is_ended(new_state):
             child = expand_leaf(leaf, board, new_state)
-            leaf.child_nodes[child.parent_action] = child
-            won = rollout(board, board.next_state(new_state, child.parent_action))
-            backpropagate(child, won)
-            
-    best_child = None
-    best_ratio = 0
+            new_state = board.next_state(new_state, child.parent_action)
+        else:
+            child = leaf
 
-    # print("N. first children: {}".format(len(root_node.child_nodes)))
+        won = rollout(board, new_state, identity_of_bot)
+        backpropagate(child, won)
+
+    best_UCT = 0
+    best_children = []
 
     for key, child in root_node.child_nodes.items():
-        ratio = child.wins/child.visits
-        # print("- Child [{}] ratio: {}".format(child.parent_action, ratio))
-        if ratio >= best_ratio:
-            best_child = child
-            best_ratio = ratio
+        child_UCT = child.wins / float(child.visits)
 
-    print("MCTS vanilla picking {} with ratio {}".format(best_child.parent_action, best_ratio))
+        if child_UCT == best_UCT:
+            best_children.append(child)
+        elif child_UCT > best_UCT:
+            best_children = [child]
+            best_UCT = child_UCT
+
+    best_child = choice(best_children)
+
+    print("MCTS vanilla picking {} with ratio {}".format(best_child.parent_action, best_UCT))
     return best_child.parent_action
