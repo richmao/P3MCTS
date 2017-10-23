@@ -36,11 +36,10 @@ def traverse_nodes(node, board, state, identity):
             best_UCT = 0
             best_child = None
             children = current.child_nodes
-            print("hey")
+
             for key, child in children.items():
-                print("hello")
-                wins = child.wins if board.current_player(current_state) == identity else 1 - child.wins
-                child_UCT = wins / child.visits + explore_faction * sqrt(log(current.visits / child.visits))
+                ratio = child.wins / child.visits
+                child_UCT = (ratio if board.current_player(current_state) == identity else 1 - ratio) + explore_faction * sqrt(log(current.visits / child.visits))
                 if child_UCT > best_UCT:
                     best_UCT = child_UCT
                     best_child = child
@@ -150,17 +149,18 @@ def think(board, state):
             leaf.child_nodes[child.parent_action] = child
             won = rollout(board, board.next_state(new_state, child.parent_action))
             backpropagate(child, won)
-
+            
     best_child = None
     best_ratio = 0
 
-    print("N. first children: {}".format(len(root_node.child_nodes)))
+    # print("N. first children: {}".format(len(root_node.child_nodes)))
 
     for key, child in root_node.child_nodes.items():
         ratio = child.wins/child.visits
-        print("- Child [{}] ratio: {}".format(child.parent_action, ratio))
+        # print("- Child [{}] ratio: {}".format(child.parent_action, ratio))
         if ratio >= best_ratio:
             best_child = child
             best_ratio = ratio
-    print(board.points_values(new_state))
+
+    print("MCTS vanilla picking {} with ratio {}".format(best_child.parent_action, best_ratio))
     return best_child.parent_action
