@@ -50,8 +50,32 @@ def traverse_nodes(node, board, state, identity):
     # Return best_child/ending node
     return current, current_state
 
+# Calculate a player's score given the current state of the game
+def calculate_score(board, s_state, current_identity):
+    return len([v for v in board.owned_boxes(s_state).values() if v == current_identity])
 
-def expand_leaf(node, board, state):
+# Choose a winning action if possible, otherwise avoid losing intentionally
+def choose_reasonable_action(board, current_state, legal_actions, current_identity):
+    # Get score before choosing an action
+    initial_score = calculate_score(board, current_state, current_identity)
+    neutral_actions = []
+
+    # Loop through possible actions
+    for action in legal_actions:
+        # Calculate new score
+        new_score = calculate_score(board, board.next_state(current_state, action), current_identity)
+
+        # If score has increased then this is a winning action
+        if new_score > initial_score:
+            return action
+        # If score is the same this action is not harmful and can be considered in the end
+        elif new_score == initial_score:
+            neutral_actions.append(action)
+    # If no winning action was found, return a neutral one
+    return choice(neutral_actions)
+
+
+def expand_leaf(node, board, state, identity):
     """ Adds a new leaf to the tree by creating a new child node for the given node.
 
     Args:
@@ -63,7 +87,7 @@ def expand_leaf(node, board, state):
     """
 
     # Choose a random action from untried_actions
-    chosen_action = choice(node.untried_actions)
+    chosen_action = choose_reasonable_action(board, state, node.untried_actions, identity)
     child = MCTSNode(parent=node, parent_action=chosen_action, action_list=board.legal_actions(board.next_state(state,chosen_action)))
 
     # Update node fields
@@ -82,26 +106,16 @@ def rollout(board, state, identity):
 
     """
 
-    def calculate_score(s_state):
-        return len([v for v in board.owned_boxes(s_state).values() if v == identity])
-
-    def choose_reasonable_action():
-        initial_score = calculate_score(current_state)
-        neutral_actions = []
-        for action in board.legal_actions(current_state):
-            new_score = calculate_score(board.next_state(current_state, action))
-            if new_score > initial_score:
-                return action
-            elif new_score == initial_score:
-                neutral_actions.append(action)
-        return choice(neutral_actions)
-
     current_state = state
+    current_identity = 1 if identity == 2 else 2
 
     # Play until end (win/lose)
     while not board.is_ended(current_state):
-        move = choose_reasonable_action()
+        move = choose_reasonable_action(board, current_state, board.legal_actions(current_state), current_identity)
         current_state = board.next_state(current_state, move)
+        # Switch current identity
+        current_identity = 1 if current_identity == 2 else 2
+
 
     # Return True if won, false otherwise
     return True if board.points_values(current_state)[identity] == 1 else False
@@ -153,7 +167,7 @@ def think(board, state):
 
         # If the reached leaf is not a game ending state, expand the tree
         if not board.is_ended(new_state):
-            child = expand_leaf(leaf, board, new_state)
+            child = expand_leaf(leaf, board, new_state, identity_of_bot)
             new_state = board.next_state(new_state, child.parent_action)
         else:
             child = leaf
@@ -179,5 +193,5 @@ def think(board, state):
 
     best_child = choice(best_children)
 
-    print("MCTS vanilla picking {} with ratio {}".format(best_child.parent_action, best_UCT))
+    print("MCTS modified picking {} with ratio {}".format(best_child.parent_action, best_UCT))
     return best_child.parent_action

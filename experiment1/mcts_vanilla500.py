@@ -164,5 +164,5 @@ def think(board, state):
 
     best_child = choice(best_children)
 
-    print("MCTS vanilla picking {} with ratio {}".format(best_child.parent_action, best_UCT))
+    # print("MCTS vanilla picking {} with ratio {}".format(best_child.parent_action, best_UCT))
     return best_child.parent_action
