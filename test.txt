@@ -1,0 +1,6 @@
+
+Round 0, fight!
+MCTS vanilla picking (2, 2, 2, 0) with ratio 0.7727272727272727
+Rollout bot picking (2, 0, 0, 0) with expected score 0.000000
+MCTS vanilla picking (0, 0, 2, 1) with ratio 0.4873417721518987
+Rollout bot picking (2, 1, 0, 0) with expected score 0.000000
